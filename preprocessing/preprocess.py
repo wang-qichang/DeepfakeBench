@@ -208,6 +208,8 @@ def extract_aligned_face_dlib(face_detector, predictor, image, res=256, mask=Non
             return cropped_face, landmark
     
     else:
+        if mask is not None:
+            return None, None, None
         return None, None
 
 def video_manipulate(
@@ -360,7 +362,8 @@ def preprocess(dataset_path, mask_path, mode, num_frames, stride, logger):
     movies_path_list = sorted([Path(p) for p in glob.glob(os.path.join(dataset_path, '**/*.mp4'), recursive=True)])
     if len(movies_path_list) == 0:
         logger.error(f"No videos found in {dataset_path}")
-        sys.exit()
+        # sys.exit()
+        return
     logger.info(f"{len(movies_path_list)} videos found in {dataset_path}")
     
     # Define paths to masks in dataset
@@ -368,8 +371,10 @@ def preprocess(dataset_path, mask_path, mode, num_frames, stride, logger):
         masks_path_list = sorted([Path(p) for p in glob.glob(os.path.join(mask_path, '**/*.mp4'), recursive=True)])
         if len(masks_path_list) == 0:
             logger.error(f"No masks found in {mask_path}")
-            sys.exit()
-        logger.info(f"{len(masks_path_list)} masks found in {mask_path}")    
+            # sys.exit()
+            return
+        else:
+            logger.info(f"{len(masks_path_list)} masks found in {mask_path}")
     
     # Start timer
     start_time = time.monotonic()
@@ -404,7 +409,7 @@ def preprocess(dataset_path, mask_path, mode, num_frames, stride, logger):
         # Wait for all futures to complete and log any errors
         for future in tqdm(concurrent.futures.as_completed(futures), total=len(movies_path_list)):
             # Print the current time
-            logger.info(f"Current time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            # logger.info(f"Current time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             try:
                 future.result()
             except Exception as e:
@@ -443,15 +448,15 @@ if __name__ == '__main__':
     # Define dataset path based on the input arguments
     ## faceforensic++
     if dataset_name == 'FaceForensics++':
-        sub_dataset_names = ["original_sequences/youtube","original_sequences/actors"\
-                             "manipulated_sequences/Deepfakes", \
-                            "manipulated_sequences/Face2Face", "manipulated_sequences/FaceSwap", \
-                            "manipulated_sequences/NeuralTextures","manipulated_sequences/FaceShifter",\
+        sub_dataset_names = ["original_sequences/youtube","original_sequences/actors",
+                             "manipulated_sequences/Deepfakes",
+                            "manipulated_sequences/Face2Face", "manipulated_sequences/FaceSwap",
+                            "manipulated_sequences/NeuralTextures","manipulated_sequences/FaceShifter",
                             "manipulated_sequences/DeepFakeDetection"]
         sub_dataset_paths = [Path(os.path.join(dataset_path, name, comp)) for name in sub_dataset_names]
         # mask
-        mask_dataset_names = ["manipulated_sequences/Deepfakes", "manipulated_sequences/Face2Face", \
-                            "manipulated_sequences/FaceSwap", "manipulated_sequences/NeuralTextures",\
+        mask_dataset_names = ["manipulated_sequences/Deepfakes", "manipulated_sequences/Face2Face",
+                            "manipulated_sequences/FaceSwap", "manipulated_sequences/NeuralTextures",
                             "manipulated_sequences/DeepFakeDetection"]
         # mask_dataset_names = []
         mask_dataset_paths = [Path(os.path.join(dataset_path, name)) for name in mask_dataset_names]
@@ -502,7 +507,8 @@ if __name__ == '__main__':
         for sub_dataset_path in sub_dataset_paths:
             if not Path(sub_dataset_path).exists():
                 logger.error(f"Sub Dataset path does not exist: {sub_dataset_path}")
-                sys.exit()
+                # sys.exit()
+                continue
         # preprocess each sub_dataset
         for sub_dataset_path in sub_dataset_paths:
             # only part of FaceForensics++ has mask
